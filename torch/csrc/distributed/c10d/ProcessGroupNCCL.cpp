@@ -37,6 +37,8 @@
 #include <torch/csrc/distributed/c10d/Utils.hpp>
 #include <torch/torch.h>
 
+#include "cudawrapper.h"
+
 namespace c10d {
 
 constexpr const char* const kNCCLAbortedCommStoreKey = "NCCLABORTEDCOMM";
@@ -668,7 +670,11 @@ void ProcessGroupNCCL::WorkNCCL::synchronizeInternal(
       // compute kernel;
       // - achieve better barrier performance.
       auto currentStream = at::cuda::getCurrentCUDAStream(device.index());
+#ifdef NCCL_HAS_CUDA_WRAPPER
+      AT_CUDA_CHECK(cudaWrapper_->cudaStreamSynchronize(currentStream));
+#else
       AT_CUDA_CHECK(cudaStreamSynchronize(currentStream));
+#endif
     }
   }
 }
@@ -714,6 +720,10 @@ void ProcessGroupNCCL::WorkNCCL::abort() {
 
 static std::atomic<size_t> process_group_id = 0;
 
+#ifdef NCCL_HAS_CUDA_WRAPPER
+CudaWrapper* ProcessGroupNCCL::cudaWrapper_;
+#endif
+
 ProcessGroupNCCL::ProcessGroupNCCL(
     const c10::intrusive_ptr<Store>& store,
     int rank,
@@ -751,6 +761,11 @@ ProcessGroupNCCL::ProcessGroupNCCL(
   coordCheckIntervalMilSec_ = getCvarInt(TORCH_NCCL_COORD_CHECK_MILSEC, 1000);
   ncclTraceBufferSize_ = getCvarInt(TORCH_NCCL_TRACE_BUFFER_SIZE, 0);
   enableCollecticeHashDebug_ = (dist_debug_level_ >= DebugLevel::Detail);
+
+#ifdef NCCL_HAS_CUDA_WRAPPER
+  cudaWrapper_ = ncclSetupWrappers(true);
+#endif
+
   // store_ usually is wrapped with PrefixStore and the prefix is different
   // across different ProcessGroupNCCL(PG) instances. We need to get the
   // underlying non-PrefixStore for sharing global information shared across
