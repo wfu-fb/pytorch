@@ -27,6 +27,8 @@
 
 #include <torch/custom_class.h>
 
+#include "cudawrapper.h"
+
 namespace c10d {
 // Control whether we perform a NCCL health check or not
 // which ensures communicators are healthy at the beginning of init.
@@ -992,6 +994,12 @@ class TORCH_API ProcessGroupNCCL : public Backend {
   size_t uid_;
 
   std::string logPrefix_;
+
+  c10::intrusive_ptr<intra_node_comm::IntraNodeComm> intraNodeComm_;
+
+#ifdef NCCL_HAS_CUDA_WRAPPER
+  static CudaWrapper* cudaWrapper_;
+#endif
 };
 
 TORCH_API std::string dump_nccl_trace();

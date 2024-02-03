@@ -37,6 +37,8 @@
 #include <torch/csrc/distributed/c10d/Utils.hpp>
 #include <torch/torch.h>
 
+#include "cudawrapper.h"
+
 namespace c10d {
 
 constexpr const char* const kNCCLAbortedCommStoreKey = "NCCLABORTEDCOMM";
@@ -652,10 +654,24 @@ void ProcessGroupNCCL::WorkNCCL::synchronizeInternal(
   // Device synchronize only after we've completed timeout checks.
   if (!barrierTensors_.empty()) {
     // If we use the work to do barrier, we should block here
-    at::cuda::OptionalCUDAGuard gpuGuard;
     for (auto& device : devices_) {
-      gpuGuard.set_index(device.index());
-      AT_CUDA_CHECK(cudaDeviceSynchronize());
+      // `dist.barrier()` only requires all CPU processes to enter this
+      // function, hence we only need to make sure the dummy all-reduce has
+      // completed. So we would only need to sync the **current stream** back to
+      // host, and do not need to synchronize the entire device (which may have
+      // kernels running on other streams).
+      // Using `cudaStreamSynchronize` instead of `cudaDeviceSynchronize` can:
+      // - lower chance of hang;
+      // - CurrentCUDAStream is usually the context of the next operation in
+      // Python, thus blocking current stream would already block the next
+      // compute kernel;
+      // - achieve better barrier performance.
+      auto currentStream = at::cuda::getCurrentCUDAStream(device.index());
+#ifdef NCCL_HAS_CUDA_WRAPPER
+      AT_CUDA_CHECK(cudaWrapper_->cudaStreamSynchronize(currentStream));
+#else
+      AT_CUDA_CHECK(cudaStreamSynchronize(currentStream));
+#endif
     }
   }
 }
@@ -725,6 +741,10 @@ bool ProcessGroupNCCL::CoalescedWorkNCCL::wait(
 
 static std::atomic<size_t> process_group_id = 0;
 
+#ifdef NCCL_HAS_CUDA_WRAPPER
+CudaWrapper* ProcessGroupNCCL::cudaWrapper_;
+#endif
+
 ProcessGroupNCCL::ProcessGroupNCCL(
     const c10::intrusive_ptr<Store>& store,
     int rank,
@@ -760,6 +780,12 @@ ProcessGroupNCCL::ProcessGroupNCCL(
       getCvarInt(TORCH_NCCL_WAIT_TIMEOUT_DUMP_MILSEC, 2000);
   coordCheckIntervalMilSec_ = getCvarInt(TORCH_NCCL_COORD_CHECK_MILSEC, 1000);
   ncclTraceBufferSize_ = getCvarInt(TORCH_NCCL_TRACE_BUFFER_SIZE, 0);
+  enableCollecticeHashDebug_ = (dist_debug_level_ >= DebugLevel::Detail);
+
+#ifdef NCCL_HAS_CUDA_WRAPPER
+  cudaWrapper_ = ncclSetupWrappers(true);
+#endif
+
   // store_ usually is wrapped with PrefixStore and the prefix is different
   // across different ProcessGroupNCCL(PG) instances. We need to get the
   // underlying non-PrefixStore for sharing global information shared across
