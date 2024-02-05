@@ -780,7 +780,6 @@ ProcessGroupNCCL::ProcessGroupNCCL(
       getCvarInt(TORCH_NCCL_WAIT_TIMEOUT_DUMP_MILSEC, 2000);
   coordCheckIntervalMilSec_ = getCvarInt(TORCH_NCCL_COORD_CHECK_MILSEC, 1000);
   ncclTraceBufferSize_ = getCvarInt(TORCH_NCCL_TRACE_BUFFER_SIZE, 0);
-  enableCollecticeHashDebug_ = (dist_debug_level_ >= DebugLevel::Detail);
 
 #ifdef NCCL_HAS_CUDA_WRAPPER
   cudaWrapper_ = ncclSetupWrappers(true);
