@@ -995,8 +995,6 @@ class TORCH_API ProcessGroupNCCL : public Backend {
 
   std::string logPrefix_;
 
-  c10::intrusive_ptr<intra_node_comm::IntraNodeComm> intraNodeComm_;
-
 #ifdef NCCL_HAS_CUDA_WRAPPER
   static CudaWrapper* cudaWrapper_;
 #endif
