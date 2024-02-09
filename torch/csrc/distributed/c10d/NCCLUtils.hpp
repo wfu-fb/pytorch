@@ -231,6 +231,7 @@ class NCCLComm {
       int numRanks,
       int rank,
       ncclUniqueId commId) {
+    TORCH_WARN("wenyin: NCCLUtils.hpp: create numRanks=%d\n", numRanks);
     auto comm = std::make_shared<NCCLComm>();
     C10D_NCCL_CHECK(
         ncclCommInitRank(&(comm->ncclComm_), numRanks, commId, rank),

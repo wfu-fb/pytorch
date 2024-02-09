@@ -1333,6 +1333,7 @@ def _new_process_group_helper(
         # Use the group name as prefix in the default store, such that
         # a single store can be reused by multiple groups.
         backend_prefix_store = PrefixStore(f"{device}/", prefix_store)
+        logger.info(f"wenyin: dist_c10d.py : {device=} {backend_str=}")
 
         if backend_str == Backend.MPI:
             if not is_mpi_available():
@@ -1375,6 +1376,7 @@ def _new_process_group_helper(
             if split_from:
                 pg_options.split_from = split_from
                 pg_options.split_color = _process_group_color(global_ranks_in_group)
+            logger.info("wenyin: dist_c10d.py calling ProcessGroupNCCL...")
             backend_class = ProcessGroupNCCL(
                 backend_prefix_store, group_rank, group_size, pg_options)
             backend_type = ProcessGroup.BackendType.NCCL
@@ -1436,6 +1438,7 @@ def _new_process_group_helper(
                                 to aid collective desynchronization debugging."""
                     )
                 else:
+                    logger.info("wenyin: dist_c10d.py: _create_process_group_wrapper")
                     backend_class = _create_process_group_wrapper(
                         wrapped_pg=backend_class,
                         store_prefix=group_name,

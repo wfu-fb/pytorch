@@ -39,6 +39,8 @@
 
 #include "cudawrapper.h"
 
+//#define NCCL_HAS_CUDA_WRAPPER 1
+
 namespace c10d {
 
 constexpr const char* const kNCCLAbortedCommStoreKey = "NCCLABORTEDCOMM";
@@ -669,10 +671,6 @@ void ProcessGroupNCCL::WorkNCCL::synchronizeInternal(
       auto currentStream = at::cuda::getCurrentCUDAStream(device.index());
 #ifdef NCCL_HAS_CUDA_WRAPPER
       AT_CUDA_CHECK(cudaWrapper_->cudaStreamSynchronize(currentStream));
-      int tcnt=456;
-      cudaWrapper_->cudaGetDeviceCount(&tcnt);
-      LOG(INFO) << "wenyin: cnt=" << tcnt << "\n";
-      std::cout <<"wenyin: cnt=" << tcnt << "\n";
 #else
       AT_CUDA_CHECK(cudaStreamSynchronize(currentStream));
 #endif
@@ -787,8 +785,6 @@ ProcessGroupNCCL::ProcessGroupNCCL(
 
 #ifdef NCCL_HAS_CUDA_WRAPPER
   cudaWrapper_ = ncclSetupWrappers(true);
-  // cudaWrapper_->cudaGetDeviceCount(&tcnt);
-  LOG(INFO) << "wenyin: processgroup 2" << "\n";
 #endif
 
   // store_ usually is wrapped with PrefixStore and the prefix is different
@@ -1876,6 +1872,8 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
     int p2pRank,
     bool isSendRecvSelf) {
   // Sanity check
+  LOG(WARNING) << "wenyin: getNCCLComm: opType="<< opTypeToString(opType) <<"\n";
+
   if (devicesKey.empty()) {
     C10_THROW_ERROR(
         DistBackendError,
@@ -1909,6 +1907,8 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
   // NCCL communicator not cached, create a new entry
   std::vector<std::shared_ptr<NCCLComm>> ncclComms;
   ncclComms.resize(devices.size());
+
+  LOG(WARNING) << "wenyin: getNCCLComm: devices.size()=" << devices.size() << "\n";
 
   // Create the unique NCCL ID and broadcast it
   ncclUniqueId ncclID;
@@ -1958,6 +1958,8 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
   C10D_NCCL_CHECK(ncclGroupStart(), c10::nullopt);
 
   for (const auto i : c10::irange(devices.size())) {
+    LOG(WARNING) << "wenyin: getNCCLComm: 5 i="<<i<<"\n";
+
     // GPU world size and GPU rank
     int numRanks, rank;
 
@@ -2003,6 +2005,8 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
     }
 #endif
 
+    LOG(WARNING) << "wenyin: getNCCLComm: NCCLComm::create(): rank=" << rank << " numRanks="<< numRanks << "\n";
+
     // To simplify conditioonal nesting, just create the ncclComms[i]
     // entry if it hasn't been yet rather than untangling the
     // conditions that might have resulted in a split above.
@@ -2014,6 +2018,8 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
 #endif
     }
 
+    LOG(WARNING) << "wenyin: getNCCLComm: NCCLComm::create done\n";
+
     // Creates the NCCL streams
     streamVal.push_back(
         at::cuda::getStreamFromPool(options_->is_high_priority_stream));
@@ -2023,6 +2029,8 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
     std::lock_guard<std::mutex> lock(mutex_);
     inInitializationCommMap_.emplace(devicesKey, ncclComms);
   }
+
+  LOG(WARNING) << "wenyin: getNCCLComm: calling ncclGroupEnd...\n";
 
   // [Note 2 ]
 #ifndef NCCL_HAS_COMM_NONBLOCKING

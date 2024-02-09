@@ -119,6 +119,7 @@ PyObject* THCPModule_nccl_init_rank(PyObject* self, PyObject* args) {
 
   ncclUniqueId commId;
   memcpy(&commId, id, NCCL_UNIQUE_ID_BYTES);
+  LOG(WARNING) << "wenyin: python_nccl: init_rank called with unique_id=" << id << " nranks=" << nranks <<"\n";
   ncclComm_t comm;
   {
     pybind11::gil_scoped_release no_gil;

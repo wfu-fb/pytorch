@@ -502,6 +502,7 @@ ncclComm_t comm_init_rank(int nranks, const ncclUniqueId& comm_id, int rank) {
   using namespace torch::cuda::nccl::detail;
   ncclComm_t comm;
   ncclUniqueId id = comm_id;
+  TORCH_WARN("wenyin: comm_init_rank: calling ncclCommInitRank")
   NCCL_CHECK(ncclCommInitRank(
       to_nccl_comm(&comm), nranks, *(to_nccl_unique_id(&id)), rank));
   return comm;
