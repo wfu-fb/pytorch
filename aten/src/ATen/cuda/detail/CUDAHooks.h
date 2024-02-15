@@ -18,7 +18,7 @@ TORCH_CUDA_CPP_API void set_magma_init_fn(void (*magma_init_fn)());
 
 // The real implementation of CUDAHooksInterface
 struct CUDAHooks : public at::CUDAHooksInterface {
-  CUDAHooks(at::CUDAHooksArgs) {}
+  CUDAHooks(at::CUDAHooksArgs) { mMock=true; }
   void initCUDA() const override;
   Device getDeviceFromPtr(void* data) const override;
   bool isPinnedPtr(const void* data) const override;
@@ -49,6 +49,11 @@ struct CUDAHooks : public at::CUDAHooksInterface {
   void cuFFTClearPlanCache(DeviceIndex device_index) const override;
   int getNumGPUs() const override;
   void deviceSynchronize(DeviceIndex device_index) const override;
+
+  // wenyin
+  bool isMock() const { return mMock; }
+  void setMock(bool mock) { mMock = mock; }
+  bool mMock;
 };
 
 } // at::cuda::detail

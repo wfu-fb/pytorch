@@ -1451,11 +1451,13 @@ def _new_process_group_helper(
         # register only a single backend when all get_device_backend_map values are the same
         if len(set(backend_config.get_device_backend_map().values())) == 1:
             for device in backend_config.get_device_backend_map().keys():
+                print(f"wenyin: _new_process_group_helper: 1: {device=}")
                 pg._register_backend(torch.device(device), backend_type, backend_class)
 
             # break out of outer loop to not create any more backends
             break
 
+        print(f"wenyin: _new_process_group_helper: 2: {device=}")
         pg._register_backend(torch.device(device), backend_type, backend_class)
 
     if device_id and pg._get_backend(device_id).supports_splitting:

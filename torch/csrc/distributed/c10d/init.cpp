@@ -48,6 +48,9 @@
 
 #include <torch/custom_class.h>
 
+#include <iostream> // wenyin
+
+
 namespace {
 
 #ifdef USE_C10D_NCCL
@@ -1778,6 +1781,7 @@ Arguments:
                  const ::c10d::ProcessGroup::BackendType& backendType,
                  const c10::optional<c10::intrusive_ptr<::c10d::Backend>>&
                      backend) {
+                std::cout<<"wenyin: init.cpp: _register_backend: device.type=" << device.type() << " be_type=" << backendType << std::endl;
                 self->setBackend(device.type(), backendType, backend);
               },
               py::arg("device"),

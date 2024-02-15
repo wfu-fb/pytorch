@@ -39,6 +39,8 @@
 
 #include "cudawrapper.h"
 
+#include <iostream>  // wenyin
+
 //#define NCCL_HAS_CUDA_WRAPPER 1
 
 namespace c10d {
@@ -605,6 +607,9 @@ void ProcessGroupNCCL::WorkNCCL::synchronize() {
 }
 
 void ProcessGroupNCCL::WorkNCCL::synchronizeStreams() {
+  std::cout<<"wenyin: ProcessGroupNCCL::WorkNCCL::synchronizeStreams"<<std::endl;
+  return; // wenyin early return
+
   for (const auto i : c10::irange(devices_.size())) {
     auto currentStream = at::cuda::getCurrentCUDAStream(devices_[i].index());
     // Block the current stream on the NCCL stream
@@ -620,6 +625,8 @@ void ProcessGroupNCCL::WorkNCCL::synchronizeStreams() {
 void ProcessGroupNCCL::WorkNCCL::synchronizeInternal(
     std::chrono::milliseconds timeout) {
   synchronizeStreams();
+
+  return ;  // wenyin early return
 
   // In case of blocking, wait for the operation to complete.
   if (blockingWait_) {
@@ -680,6 +687,7 @@ void ProcessGroupNCCL::WorkNCCL::synchronizeInternal(
 
 // Same as calling synchronize().
 bool ProcessGroupNCCL::WorkNCCL::wait(std::chrono::milliseconds timeout) {
+  std::cout<<"wenyin: ProcessGroupNCCL::WorkNCCL::wait "<< timeout.count() << std::endl;
   RECORD_PARAM_COMMS(
       static_cast<int>(this->seq_), // seq
       0, // process group ptr
@@ -734,6 +742,7 @@ c10::intrusive_ptr<ProcessGroupNCCL::CoalescedWorkNCCL> ProcessGroupNCCL::
 // Same as calling synchronize().
 bool ProcessGroupNCCL::CoalescedWorkNCCL::wait(
     std::chrono::milliseconds timeout) {
+  std::cout<<"wenyin: ProcessGroupNCCL: CoalescedWorkNCCL: wait"<< timeout.count() << std::endl;
   for (auto& w : works_) {
     w.wait(timeout);
   }
@@ -762,10 +771,11 @@ ProcessGroupNCCL::ProcessGroupNCCL(
       terminateHeartbeatMonitorThread_(false),
       collectiveDebugInfoMode_(false),
       uid_(process_group_id++) {
-  TORCH_CHECK_WITH(
-      ValueError,
-      at::cuda::getNumGPUs() != 0,
-      "ProcessGroupNCCL is only supported with GPUs, no GPUs found!");
+        // wenyin GPU bypass
+  // TORCH_CHECK_WITH(
+  //     ValueError,
+  //     at::cuda::getNumGPUs() != 0,
+  //     "ProcessGroupNCCL is only supported with GPUs, no GPUs found!");
   logPrefix_ = createLogPrefix();
   blockingWait_ = getCvarBool(TORCH_NCCL_BLOCKING_WAIT, false);
   asyncErrorHandling_ = static_cast<ErrorHandlingMode>(
@@ -1980,8 +1990,9 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
     // Get the device index
     int deviceIndex = devices[i].index();
 
-    gpuGuard.set_index(deviceIndex);
+    // gpuGuard.set_index(deviceIndex);    // wenyin hack skip
 #ifdef NCCL_HAS_COMM_SPLIT
+    std::cout<<"wenyin: ProcessGroupNCCL.cpp: nccl_has_comm_split deviceIndex="<<deviceIndex<<std::endl;
     if (options_->split_from) {
       TORCH_CHECK(
           options_->split_color != 0,
@@ -2012,23 +2023,36 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
     // conditions that might have resulted in a split above.
     if (!ncclComms[i]) {
 #ifdef NCCL_HAS_COMM_NONBLOCKING
+      std::cout<< "wenyin: getNCCLComm: NCCL_HAS_COMM_NONBLOCKING" <<std::endl;
       ncclComms[i] = NCCLComm::create(numRanks, rank, ncclID, options_->config);
 #else
+      std::cout<< "wenyin: getNCCLComm: not NCCL_HAS_COMM_NONBLOCKING" <<std::endl;
       ncclComms[i] = NCCLComm::create(numRanks, rank, ncclID);
 #endif
     }
 
-    LOG(WARNING) << "wenyin: getNCCLComm: NCCLComm::create done\n";
+    LOG(WARNING) << "wenyin: getNCCLComm: NCCLComm::create done, device_index="<<0<<std::endl;
 
     // Creates the NCCL streams
     streamVal.push_back(
-        at::cuda::getStreamFromPool(options_->is_high_priority_stream));
+        // at::cuda::getStreamFromPool(options_->is_high_priority_stream));
+      c10::cuda::CUDAStream(
+        c10::cuda::CUDAStream::UNCHECKED,
+        c10::Stream(
+          c10::Stream::UNSAFE,
+          c10::Device(c10::DeviceType::CPU, 0),
+          0)
+      )
+    );
   }
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
     inInitializationCommMap_.emplace(devicesKey, ncclComms);
   }
+
+  std::cout<<"wenyin: ProcessGroupNCCL.cpp: getNCCLComm: early return"<<std::endl;
+  return ncclComms; // wenyin early return
 
   LOG(WARNING) << "wenyin: getNCCLComm: calling ncclGroupEnd...\n";
 
@@ -2451,9 +2475,12 @@ c10::intrusive_ptr<Work> ProcessGroupNCCL::collective(
     bool avoidRecordStreams) {
   // Environment setting by the user may add onto collective call's option
   avoidRecordStreams |= avoidRecordStreams_;
-  c10::cuda::CaptureStatus capture_status =
-      c10::cuda::currentStreamCaptureStatusMayInitCtx();
-  errorIfCapturingNonCapturableNCCL(capture_status);
+
+  // wenyin hack
+  c10::cuda::CaptureStatus capture_status = c10::cuda::CaptureStatus::None;
+  // c10::cuda::CaptureStatus capture_status =
+  //     c10::cuda::currentStreamCaptureStatusMayInitCtx();
+  // errorIfCapturingNonCapturableNCCL(capture_status);
 
   // Bump collective counter
   seq_++;
@@ -2469,6 +2496,16 @@ c10::intrusive_ptr<Work> ProcessGroupNCCL::collective(
   const bool inputs_same_dev = (devices.size() == 1);
   const auto key = getKeyFromDevices(devices);
   auto& ncclComms = getNCCLComm(key, devices, opType);
+
+  // wenyin early return
+  return initWork(
+          devices,
+          rank_,
+          opType,
+          (outputs.size() == 1) ? profilingTitle : nullptr,
+          inputs,
+          outputs);
+
 
   if (coalescing_state_ & CoalActive) {
     coalescing_state_ |= CoalColl;
@@ -2922,6 +2959,7 @@ c10::intrusive_ptr<Work> ProcessGroupNCCL::allreduce_sparse(
 c10::intrusive_ptr<Work> ProcessGroupNCCL::allreduce_impl(
     std::vector<at::Tensor>& tensors,
     const AllreduceOptions& opts) {
+  std::cout<< "wenyin: ProcessGroupNCCL.cpp: allreduce_impl: " << std::endl;
   int dev_in_group = 0;
   return collective(
       tensors,
@@ -2930,6 +2968,7 @@ c10::intrusive_ptr<Work> ProcessGroupNCCL::allreduce_impl(
           at::Tensor& output,
           ncclComm_t comm,
           at::cuda::CUDAStream& stream) {
+        std::cout<<"wenyin: allreduce_impl: CB"<<std::endl;
         auto ncclDataType = getNcclDataType(input.scalar_type());
         auto ncclReduceOp = getNcclReduceOp(
             opts.reduceOp, input, ncclDataType, comm, dev_in_group++);
@@ -2949,7 +2988,7 @@ c10::intrusive_ptr<Work> ProcessGroupNCCL::allreduce_impl(
 c10::intrusive_ptr<Work> ProcessGroupNCCL::allreduce(
     std::vector<at::Tensor>& tensors,
     const AllreduceOptions& opts) {
-  check_gpu_tensors_different_devices(tensors);
+  //check_gpu_tensors_different_devices(tensors);  // wenyin hack
 
   // @lint-ignore CLANGTIDY
   auto tensor = tensors.back();
@@ -3584,6 +3623,7 @@ c10::intrusive_ptr<Work> ProcessGroupNCCL::reduce_scatter_tensor_coalesced(
 }
 
 c10::intrusive_ptr<Work> ProcessGroupNCCL::barrier(const BarrierOptions& opts) {
+  std::cout<<"wenyin: ProcessGroupNCCL::barrier: here"<<std::endl;
   RECORD_PARAM_COMMS(
       static_cast<int>(
           this->getSequenceNumberForGroup() + 1), // seq + 1 to match collective
@@ -3601,45 +3641,74 @@ c10::intrusive_ptr<Work> ProcessGroupNCCL::barrier(const BarrierOptions& opts) {
 
   // Use user defined GPU device ids if provided
   if (!opts.device_ids.empty()) {
+    std::cout<<"wenyin: ProcessGroupNCCL::barrier: 2"<<std::endl;
+
     for (auto device : opts.device_ids) {
       devices.emplace_back(at::DeviceType::CUDA, device);
     }
   } else if (usedDeviceIdxs_.empty()) {
+    std::cout<<"wenyin: ProcessGroupNCCL::barrier: 3"<<std::endl;
+
     // This means there is not yet a NCCL collective being called
     // Here we have to use the best guesses and will use a single GPU to call
     // allreduce to achieve barrier.
     // In case the multiple processes fall into the same node, we use rank to
     // ensure that each process is on a different GPU
     auto numGPUs = at::cuda::getNumGPUs();
-    int16_t deviceIdx = static_cast<int16_t>(rank_ % numGPUs);
-    LOG(INFO)
-        << logPrefix()
-        << c10::str(
-               " using GPU ",
-               deviceIdx,
-               " to perform barrier as devices used by this process are currently unknown. ",
-               "This can potentially cause a hang if this rank to GPU mapping is incorrect.",
-               "Specify device_ids in barrier() to force use of a particular device.");
-    devices.emplace_back(guessDeviceForRank());
+    std::cout<<"wenyin: ProcessGroupNCCL::barrier: 3b  numGPUs="<< numGPUs<<std::endl;
+
+    if (numGPUs > 0) { // wenyin hack
+      int16_t deviceIdx = static_cast<int16_t>(rank_ % numGPUs);
+      LOG(INFO)
+          << logPrefix()
+          << c10::str(
+                " using GPU ",
+                deviceIdx,
+                " to perform barrier as devices used by this process are currently unknown. ",
+                "This can potentially cause a hang if this rank to GPU mapping is incorrect.",
+                "Specify device_ids in barrier() to force use of a particular device.");
+      devices.emplace_back(guessDeviceForRank());
+    }
+    else {  // cpu nccl hack
+      devices.emplace_back(at::DeviceType::CPU, 0);
+    }
   } else {
+    std::cout<<"wenyin: ProcessGroupNCCL::barrier: 4"<<std::endl;
+
     for (auto usedDeviceIdx : usedDeviceIdxs_) {
       devices.emplace_back(at::DeviceType::CUDA, usedDeviceIdx);
     }
   }
 
+  std::cout<<"wenyin: ProcessGroupNCCL::barrier: 5"<<std::endl;
+
   std::vector<at::Tensor> barrierTensors;
   barrierTensors.reserve(devices.size());
 
-  at::cuda::OptionalCUDAGuard gpuGuard;
-  for (auto& device : devices) {
-    gpuGuard.set_index(device.index());
-    barrierTensors.push_back(at::empty(
-        {1},
-        at::TensorOptions().device(at::DeviceType::CUDA).dtype(at::kByte)));
+  if (devices[0].type() == at::DeviceType::CUDA) {  // wenyin
+    at::cuda::OptionalCUDAGuard gpuGuard;
+    for (auto& device : devices) {
+      gpuGuard.set_index(device.index());
+      barrierTensors.push_back(at::empty(
+          {1},
+          at::TensorOptions().device(at::DeviceType::CUDA).dtype(at::kByte)));
+    }
   }
+  else {
+    std::cout<<"wenyin: ProcessGroupNCCL::barrier: 5b"<<std::endl;
+      barrierTensors.push_back(at::empty(
+          {1},
+          at::TensorOptions().device(at::DeviceType::CPU).dtype(at::kByte)));
+  }
+
+
+  std::cout<<"wenyin: ProcessGroupNCCL::barrier: 6"<<std::endl;
+
 
   // All reduce to achieve the barrier
   auto work = allreduce(barrierTensors);
+
+  std::cout<<"wenyin: ProcessGroupNCCL::barrier: 7"<<std::endl;
 
   // Work will take over barrierTensors
   auto ncclWork = dynamic_cast<ProcessGroupNCCL::WorkNCCL*>(work.get());

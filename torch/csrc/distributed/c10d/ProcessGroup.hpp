@@ -21,6 +21,8 @@
 // SEE RFC: https://github.com/pytorch/pytorch/issues/39662
 // *************************************************************************
 
+#include <iostream> // wenyin
+
 constexpr auto kProcessGroupDefaultTimeout =
     std::chrono::milliseconds(30 * 60 * 1000);
 
@@ -580,16 +582,26 @@ class TORCH_API ProcessGroup : public torch::CustomClassHolder {
     static at::Tensor tensor;
     // TODO: if nccl was specified then use it
     auto device = opts.device;
+    std::cout<<"wenyin: ProcessGroup.hpp: barrier() prepare to call."<< std::endl;
+
     if (device.has_value()) {
-      // set device tensor from argument
+      std::cout<<"wenyin: ProcessGroup.hpp: barrier() called with device.value = "<< device.value() << " override to CPU"<< std::endl;
+
+      // // set device tensor from argument
+      // tensor = at::empty(
+      //     {1}, at::TensorOptions().device(device.value()).dtype(at::kByte));
+
       tensor = at::empty(
-          {1}, at::TensorOptions().device(device.value()).dtype(at::kByte));
+          {1},
+          at::TensorOptions().device(at::DeviceType::CPU).dtype(at::kByte));
     } else if (backendType_ == c10d::ProcessGroup::BackendType::NCCL) {
       // set cuda tensor
+      std::cout<<"wenyin: ProcessGroup.hpp: barrier() called with NCCL backend..."<<std::endl;
       tensor = at::empty(
           {1},
           at::TensorOptions().device(at::DeviceType::CUDA).dtype(at::kByte));
     } else {
+      std::cout<<"wenyin: ProcessGroup.hpp: barrier() called with CPU device..."<<std::endl;
       // Default to using cpu implementation
       tensor = at::empty(
           {1},
@@ -623,6 +635,7 @@ class TORCH_API ProcessGroup : public torch::CustomClassHolder {
       c10::DeviceType deviceType,
       BackendType backendType,
       const c10::optional<c10::intrusive_ptr<Backend>>& backend) {
+    std::cout<<"wenyin: ProcessGroup.hpp: setBackend() called with deviceType = "<< deviceType << " be_type=" << backendType << std::endl;
     // TODO: should we add these entries after the backend setting succeeds?
     deviceTypeToBackendType_[deviceType] = backendType;
     deviceTypes_.insert(deviceType);

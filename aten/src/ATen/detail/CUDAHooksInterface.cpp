@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <iostream> // wenyin
+
 namespace at {
 namespace detail {
 
@@ -34,6 +36,7 @@ const CUDAHooksInterface& getCUDAHooks() {
   // safe...)
 #if !defined C10_MOBILE
   static c10::once_flag once;
+  std::cout<<"wenyin: getCUDAHooks called\n";
   c10::call_once(once, [] {
     cuda_hooks = CUDAHooksRegistry()->Create("CUDAHooks", CUDAHooksArgs{}).release();
     if (!cuda_hooks) {

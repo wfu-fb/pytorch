@@ -396,11 +396,13 @@ struct Symbolizer {
     if (it == entries_.end()) {
       // NOLINTNEXTLINE(*-c-arrays*)
       const char* args[] = {
-          "addr2line", "-C", "-f", "-e", name.c_str(), nullptr};
+          "/home/wenyinfu/tmp/sandbox/folly.symbolizer_stable/folly-addr2line", "-C", "-f", "-e", name.c_str(), nullptr};
+          // "addr2line", "-C", "-f", "-e", name.c_str(), nullptr};
       it = entries_
                .insert_or_assign(
                    name,
-                   Entry{std::make_unique<Communicate>("addr2line", args), {}})
+                  //  Entry{std::make_unique<Communicate>("addr2line", args), {}})
+                   Entry{std::make_unique<Communicate>("/home/wenyinfu/tmp/sandbox/folly.symbolizer_stable/folly-addr2line", args), {}})
                .first;
     }
     return it->second;

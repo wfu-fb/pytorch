@@ -18,6 +18,9 @@
 #include <c10/cuda/CUDAFunctions.h>
 #include <c10/util/irange.h>
 
+#include <iostream> // wenyin
+
+
 #if AT_CUDNN_ENABLED()
 #include <ATen/cudnn/cudnn-wrapper.h>
 #endif
@@ -103,6 +106,13 @@ void CUDAHooks::initCUDA() const {
   at::vitals::VitalsAPI.setVital("CUDA", "used", "true", /* force = */ true);
 
   maybe_set_cuda_module_loading("LAZY");
+
+  std::cout<<"wenyin: CUDAHocks.h: initCUDA(): isMock()=" << isMock() << std::endl;
+
+  if (isMock()) {
+    std::cout<<"wenyin: CUDAHocks.h: initCUDA() mocked out\n";
+    return;
+  }
   const auto num_devices = c10::cuda::device_count_ensure_non_zero();
   c10::cuda::CUDACachingAllocator::init(num_devices);
   at::cuda::detail::init_p2p_access_cache(num_devices);
