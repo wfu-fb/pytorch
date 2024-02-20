@@ -32,6 +32,8 @@
 
 #include <torch/csrc/distributed/c10d/socket.h>
 
+#include <iostream> // wenyin debug
+
 namespace c10d {
 namespace detail {
 
@@ -258,6 +260,11 @@ class SendBuffer {
 
   void flush() {
     if (buffer.size() > 0) {
+      // std::cout<<"wenyin: TCPStore.cpp: flush "<<std::hex;
+      // for (auto& b : buffer) {
+      //   std::cout<<static_cast<unsigned int>(b);
+      // }
+      // std::cout<<std::dec<<std::endl;
       client.sendRaw(buffer.data(), buffer.size());
       buffer.clear();
     }
@@ -284,7 +291,9 @@ TCPStore::TCPStore(
               numWorkers ? c10::optional<std::size_t>(*numWorkers)
                          : c10::nullopt,
               waitWorkers,
-              timeout}} {}
+              timeout}} {
+                std::cout<<"wenyin: TCPStore.cpp: TCPStore masterAddr="<<masterAddr<<", masterPort="<<masterPort<<", numWorkers="<<numWorkers.value()<<std::endl;
+              }
 
 TCPStore::TCPStore(std::string host, const TCPStoreOptions& opts)
     : Store{opts.timeout},
@@ -296,6 +305,9 @@ TCPStore::TCPStore(std::string host, const TCPStoreOptions& opts)
         ::c10d::detail::is_libuv_tcpstore_backend_available(),
         "use_libuv was requested but PyTorch was build without libuv support");
   }
+
+  std::cout<<"wenyin: TCPStore.cpp: TCPStoreOptions host="<<addr_.host<<":"<<addr_.port<<", numWorkers="<<numWorkers_.value()
+    << " masterPort=" << opts.port<<" isServer="<<opts.isServer<<std::endl;
 
   Socket::initialize();
 
@@ -340,6 +352,7 @@ TCPStore::TCPStore(std::string host, const TCPStoreOptions& opts)
   client_ = detail::TCPClient::connect(addr_, opts);
   // TCP connection established
   C10D_DEBUG("TCP client connected to host {}:{}", addr_.host, addr_.port);
+  std::cout<<"wenyin: TCPStore.cpp: TCPStore connection established"<<std::endl;
 
   // client's first query for validation
   validate();
@@ -349,7 +362,13 @@ TCPStore::TCPStore(std::string host, const TCPStoreOptions& opts)
   }
 }
 
-TCPStore::~TCPStore() = default;
+// TCPStore::~TCPStore() = default;
+TCPStore::~TCPStore() {
+  for (auto kv : clientCounters_) {
+    std::cout<<"storecounters "<<kv.first<<": " << kv.second.count() << " "<< kv.second.mean() << " "<< kv.second.variance() << std::endl;
+  }
+}
+
 
 void TCPStore::waitForWorkers() {
   detail::timing_guard tguard(clientCounters_["waitForWorkers"]);
@@ -397,6 +416,8 @@ void TCPStore::validate(void) {
 }
 
 void TCPStore::set(const std::string& key, const std::vector<uint8_t>& data) {
+  std::cout<<"wenyin: TCPStore::set key="<<key<<std::endl;
+
   detail::timing_guard tguard(clientCounters_["set"]);
   const std::lock_guard<std::mutex> lock(activeOpLock_);
   detail::SendBuffer buffer(*client_, detail::QueryType::SET);
@@ -421,6 +442,8 @@ std::vector<uint8_t> TCPStore::compareSet(
 }
 
 std::vector<uint8_t> TCPStore::get(const std::string& key) {
+  std::cout<<"wenyin: TCPStore::get key="<<key<<std::endl;
+
   detail::timing_guard tguard(clientCounters_["get"]);
   const std::lock_guard<std::mutex> lock(activeOpLock_);
   return doGet(keyPrefix_ + key);
@@ -436,6 +459,8 @@ std::vector<uint8_t> TCPStore::doGet(const std::string& key) {
 }
 
 int64_t TCPStore::add(const std::string& key, int64_t value) {
+  std::cout<<"wenyin: TCPStore::add key="<<key<<std::endl;
+
   detail::timing_guard tguard(clientCounters_["add"]);
   const std::lock_guard<std::mutex> lock(activeOpLock_);
   return incrementValueBy(keyPrefix_ + key, value);
@@ -453,6 +478,8 @@ bool TCPStore::deleteKey(const std::string& key) {
 }
 
 int64_t TCPStore::incrementValueBy(const std::string& key, int64_t delta) {
+  std::cout<<"wenyin: TCPStore::incrementValueBy key="<<key<<std::endl;
+
   detail::SendBuffer buff(*client_, detail::QueryType::ADD);
   buff.appendString(key);
   buff.appendValue<std::int64_t>(delta);
@@ -553,6 +580,7 @@ void TCPStore::doWait(
 void TCPStore::append(
     const std::string& key,
     const std::vector<uint8_t>& data) {
+  std::cout<<"wenyin: TCPStore::append key="<<key<<std::endl;
   detail::timing_guard tguard(clientCounters_["append"]);
   const std::lock_guard<std::mutex> lock(activeOpLock_);
   detail::SendBuffer buffer(*client_, detail::QueryType::APPEND);
