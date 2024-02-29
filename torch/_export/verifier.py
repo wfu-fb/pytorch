@@ -31,6 +31,30 @@ def _check_has_fake_tensor(node: torch.fx.Node) -> None:
     return _check_val(node)
 
 
+def check_stack_trace(node: torch.fx.Node) -> None:
+    '''
+    Perform stack_trace metadata checks on a graph node.
+    Constraints:
+        - populated, non-empty str for 'call_function', 'get_attr'
+        - None for 'placeholder', 'output'
+    '''
+    stack_trace = node.meta.get("stack_trace", None)
+    if node.op in ['call_function', 'get_attr']:
+        if stack_trace is None:
+            raise SpecViolationError(
+                f"Node {node} of type {node.op} is missing stack_trace metadata"
+            )
+        if not isinstance(stack_trace, str) or stack_trace == "":
+            raise SpecViolationError(
+                f"Node {node} of type {node.op} has invalid stack_trace metadata, should be a non-empty str: {stack_trace}"
+            )
+    elif node.op in ['placeholder', 'output']:
+        if stack_trace:
+            raise SpecViolationError(
+                f"Node {node} of type {node.op} contains stack_trace metadata, this should be None"
+            )
+
+
 def _check_val(node: torch.fx.Node) -> None:
     def _check_correct_val(val):
         if val is None:
@@ -247,6 +271,8 @@ class Verifier(metaclass=_VerifierMeta):
                 # TODO(zhxchen17)
                 # elif node.op == "output":
                 #     _check_flattened_outputs()
+
+                check_stack_trace(node)
 
         self.check_additional(gm)
 

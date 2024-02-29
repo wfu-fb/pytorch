@@ -445,6 +445,12 @@ def _export_non_strict(
 
         gm = replace_set_grad_with_hop_pass(gm)
 
+    # Remove stack_trace metadata from all placeholders/inputs nodes.
+    for mod in gm.modules():
+        for node in mod.graph.nodes:
+            if node.op in ["placeholder", "output"]:
+                node.meta.pop("stack_trace", None)
+
     # NOTE: aot_export adds symint metadata for placeholders with int values;
     # since these become specialized, we replace such metadata with the original values
     flat_args = pytree.tree_leaves((fake_args, fake_kwargs))
@@ -947,6 +953,10 @@ def _export(
     gm = ep_non_strict.gm
     export_graph_signature = ep_non_strict.sig
     constants = ep_non_strict.constants
+
+    # Don't copy over stack_trace metadata for params/buffers nodes
+    for metadata in params_buffers_to_node_meta.values():
+        metadata.pop("stack_trace", None)
 
     # After aot_export, set the param/buffer metadata back into placeholders
     # Technically, users can still construct this data from param names
