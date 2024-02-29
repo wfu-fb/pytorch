@@ -181,6 +181,9 @@ def lift_constants_pass(
                 for k, v in node.meta.items():
                     const_placeholder_node.meta[k] = v
 
+                # Remove stack_trace from the node metadata
+                const_placeholder_node.meta.pop("stack_trace", None)
+
                 input_spec_arg: ArgumentSpec
                 if isinstance(constant_val, torch.Tensor):
                     if fake_mode is not None:

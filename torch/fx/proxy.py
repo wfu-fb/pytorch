@@ -165,13 +165,15 @@ class TracerBase:
         elif self.module_stack:
             node.meta['nn_module_stack'] = copy.copy(self.module_stack)
 
-        if not 'stack_trace' in node.meta and not node.op in ["placeholder", "output"]:
+        if 'stack_trace' not in node.meta and node.op not in ["placeholder", "output"]:
             user_frame = self._find_user_frame()
             if user_frame:
                 summary = traceback.extract_stack(user_frame)
+                # some information loss here if we use a wrapper module on a callable
                 stack_trace = [frame for frame in summary if frame.name == 'forward']
-                stack_trace = traceback.StackSummary.from_list(stack_trace)
-                node.meta["stack_trace"] = ''.join(stack_trace.format())
+                if stack_trace:  # this is empty if we compile through dynamo
+                    stack_trace = traceback.StackSummary.from_list(stack_trace)
+                    node.meta["stack_trace"] = ''.join(stack_trace.format())
 
         return node
 
