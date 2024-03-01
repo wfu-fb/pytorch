@@ -35,18 +35,14 @@ def check_stack_trace(node: torch.fx.Node) -> None:
     '''
     Perform stack_trace metadata checks on a graph node.
     Constraints:
-        - populated, non-empty str for 'call_function', 'get_attr'
+        - None or non-empty str for 'call_function', 'get_attr'
         - None for 'placeholder', 'output'
     '''
     stack_trace = node.meta.get("stack_trace", None)
     if node.op in ['call_function', 'get_attr']:
-        if stack_trace is None:
+        if stack_trace is not None and not isinstance(stack_trace, str):
             raise SpecViolationError(
-                f"Node {node} of type {node.op} is missing stack_trace metadata"
-            )
-        if not isinstance(stack_trace, str) or stack_trace == "":
-            raise SpecViolationError(
-                f"Node {node} of type {node.op} has invalid stack_trace metadata, should be a non-empty str: {stack_trace}"
+                f"Node {node} of type {node.op} has invalid stack_trace metadata, should be None or a non-empty str: {stack_trace}"
             )
     elif node.op in ['placeholder', 'output']:
         if stack_trace:
