@@ -964,7 +964,6 @@ class _ModuleStackTracer(PythonKeyTracer):
         """PythonKeyTracer overrides call_module to avoid the scope handling,
         but we actually want it.
         """
-        # breakpoint()
         from torch._dynamo import OptimizedModule
         # FIXME (tmanlaibaatar)
         # When we call torch.compile inside HOO, we will end up

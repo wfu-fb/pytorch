@@ -165,6 +165,8 @@ class TracerBase:
         elif self.module_stack:
             node.meta['nn_module_stack'] = copy.copy(self.module_stack)
 
+        # If stack trace is missing (typically in non-strict mode)
+        # add back by finding forward() stack frames
         if 'stack_trace' not in node.meta and node.op not in ["placeholder", "output"]:
             user_frame = self._find_user_frame()
             if user_frame:
