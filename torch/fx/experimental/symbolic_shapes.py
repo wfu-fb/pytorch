@@ -2625,6 +2625,13 @@ class ShapeEnv:
     ) -> "sympy.Expr":
         """Create a new symbol which is tracked by this ShapeEnv
         """
+        # check if constraint_dim is actually static integer
+        if constraint_dim and constraint_dim.vr.lower == constraint_dim.vr.upper:
+            dynamic_dim = DimDynamic.STATIC
+            if constraint_dim.vr.lower != val:
+                raise ConstraintViolationError(f"Static shape constraint of {constraint_dim.vr.lower} does not match input size of {val}, for input {source.base.local_name}, dim {source.idx}")
+            constraint_dim = None
+
         # see note [Tensor Fakification and Symbol Caching]
         source_name = source.name()
         if (isinstance(symbolic_context, StatefulSymbolicContext)
@@ -3037,7 +3044,8 @@ class ShapeEnv:
                 input_guards.append((source, s))
                 constraint_violated = False
                 if isinstance(constraint, StrictMinMaxConstraint):
-                    constraint_violated = True
+                    if not (s == constraint.vr.lower == constraint.vr.upper):
+                        constraint_violated = True
                 elif isinstance(constraint, RelaxedUnspecConstraint):
                     # Don't complain about 0/1 specialization, we
                     # expect to have to compile in this case anyway

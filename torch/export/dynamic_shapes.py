@@ -698,9 +698,19 @@ def _process_dynamic_shapes(
             bounds[dim.__name__] = (dim.min, dim.max)
 
     def update_symbols(tensor, shape):
+
+        def _create_static_dim(tensor, i, value):
+            dim = _Dim(f"d{id(tensor)}_i", (int,), {"min": value, "max": value})
+            dim.__module__ = getattr(
+                inspect.getmodule(inspect.stack()[1][0]), "__name__", "__main__"
+            )
+            return dim
+
         if isinstance(shape, dict):
             for i, dim in shape.items():
-                if isinstance(dim, _Dim):
+                if isinstance(dim, (int, _Dim)):
+                    if isinstance(dim, int):
+                        dim = _create_static_dim(tensor, i, dim)
                     check_same_bounds(dim)
                     constraint = to_constraint(dim, tensor, i)
                     symbols[dim.__name__].append(constraint)
@@ -713,7 +723,9 @@ def _process_dynamic_shapes(
                         )
         elif isinstance(shape, (tuple, list)):
             for i, dim in enumerate(shape):
-                if isinstance(dim, _Dim):
+                if isinstance(dim, (int, _Dim)):
+                    if isinstance(dim, int):
+                        dim = _create_static_dim(tensor, i, dim)
                     check_same_bounds(dim)
                     constraint = to_constraint(dim, tensor, i)
                     symbols[dim.__name__].append(constraint)
@@ -828,6 +840,9 @@ def _process_constraints(
     multi_range_constraints: Dict[InputDim, List[ValueRanges]] = defaultdict(list)
     for constraint in input_shape_constraints:
         for node in tensor_id_to_nodes[constraint["t_id"]]:
+            # skip static shape constraints
+            if constraint["min"] == constraint["max"]:
+                continue
             node_dim = InputDim(node, constraint["dim"])
 
             # Accumulate range constraints
