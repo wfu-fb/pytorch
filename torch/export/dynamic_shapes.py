@@ -698,7 +698,6 @@ def _process_dynamic_shapes(
             bounds[dim.__name__] = (dim.min, dim.max)
 
     def update_symbols(tensor, shape):
-
         def _create_static_dim(tensor, i, value):
             dim = _Dim(f"d{id(tensor)}_i", (int,), {"min": value, "max": value})
             dim.__module__ = getattr(

@@ -2629,7 +2629,9 @@ class ShapeEnv:
         if constraint_dim and constraint_dim.vr.lower == constraint_dim.vr.upper:
             dynamic_dim = DimDynamic.STATIC
             if constraint_dim.vr.lower != val:
-                raise ConstraintViolationError(f"Static shape constraint of {constraint_dim.vr.lower} does not match input size of {val}, for input {source.base.local_name}, dim {source.idx}")
+                raise ConstraintViolationError(
+                    f"Static shape constraint of {constraint_dim.vr.lower} does not match input size of {val}, for {source.name()}"
+                )
             constraint_dim = None
 
         # see note [Tensor Fakification and Symbol Caching]
