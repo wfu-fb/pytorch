@@ -2632,6 +2632,9 @@ class ShapeEnv:
                 raise ConstraintViolationError(
                     f"Static shape constraint of {constraint_dim.vr.lower} does not match input size of {val}, for {source.name()}"
                 )
+            if symbolic_context:
+                symbolic_context.dynamic_sizes[source.idx] = dynamic_dim
+                symbolic_context.constraint_sizes[source.idx] = None
             constraint_dim = None
 
         # see note [Tensor Fakification and Symbol Caching]
@@ -3055,7 +3058,7 @@ class ShapeEnv:
                 input_guards.append((source, s))
                 constraint_violated = False
                 if isinstance(constraint, StrictMinMaxConstraint):
-                    if not (s == constraint.vr.lower == constraint.vr.upper):  # static constraint
+                    if not (s == constraint.vr.lower == constraint.vr.upper):  # allow static constraints
                         constraint_violated = True
                 elif isinstance(constraint, RelaxedUnspecConstraint):
                     # Don't complain about 0/1 specialization, we

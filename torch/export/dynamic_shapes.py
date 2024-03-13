@@ -699,7 +699,9 @@ def _process_dynamic_shapes(
 
     def update_symbols(tensor, shape):
         def _create_static_dim(tensor, i, value):
-            return _Dim(f"d{id(tensor)}_i", (int,), {"min": value, "max": value})
+            return _Dim(
+                f"static_dim_{id(tensor)}_i", (int,), {"min": value, "max": value}
+            )
 
         if isinstance(shape, dict):
             for i, dim in shape.items():
