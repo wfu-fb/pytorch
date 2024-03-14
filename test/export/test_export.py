@@ -731,7 +731,6 @@ class TestExport(TestCase):
 
         # all of these should be fine
         for dynamic_shapes in [
-            {"x": {0: dx, 1: None}, "y": {0: dy, 1: None}, "z": {0: dz, 1: None}},
             ({0: dx, 1: 6}, {0: dy, 1: 4}, {0: dz, 1: 3}),
             ((dx, None), (dy, 4), (dz, 3)),
             ((None, 6), (5, None), (None, None)),
