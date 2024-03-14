@@ -2626,7 +2626,7 @@ class ShapeEnv:
         """Create a new symbol which is tracked by this ShapeEnv
         """
         # check if constraint_dim is actually static integer
-        if constraint_dim and constraint_dim.vr.lower == constraint_dim.vr.upper:
+        if isinstance(constraint_dim, StrictMinMaxConstraint) and constraint_dim.vr.lower == constraint_dim.vr.upper:
             dynamic_dim = DimDynamic.STATIC
             if constraint_dim.vr.lower != val:
                 raise ConstraintViolationError(
