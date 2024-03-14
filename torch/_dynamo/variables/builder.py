@@ -333,6 +333,7 @@ class VariableBuilder:
                     torch.nn.Parameter,
                     torch._subclasses.FakeTensor,
                     torch._subclasses.functional_tensor.FunctionalTensor,
+                    torch._subclasses.async_tensor.AsyncTensor,
                 ),
                 cls.wrap_tensor,
             ),
@@ -1032,6 +1033,7 @@ class VariableBuilder:
                 torch.nn.Parameter,
                 torch._subclasses.fake_tensor.FakeTensor,
                 torch._subclasses.functional_tensor.FunctionalTensor,
+                torch._subclasses.async_tensor.AsyncTensor,
             ) or is_traceable_wrapper_subclass(value), type(value)
             subclass_type = None
 
@@ -1445,6 +1447,8 @@ def wrap_fx_proxy_cls(
             }
             assert "source" in options and options["source"] is not None
             kwargs["source"] = options["source"]
+            if isinstance(example_value, torch._subclasses.async_tensor.AsyncTensor):
+                example_value = example_value.materialized_tensor
             example_value = wrap_to_fake_tensor_and_record(
                 example_value, tx=tx, **kwargs
             )
@@ -1453,7 +1457,7 @@ def wrap_fx_proxy_cls(
         ):
             raise InternalTorchDynamoError(
                 "`example_value` needs to be a `FakeTensor`"
-                f"wrapped by this instance of Dynamo. Found: {example_value}"
+                f"wrapped by this instance of Dynamo. Found: {example_value} with id: {id(example_value)}"
             )
 
     if isinstance(example_value, torch.Tensor):
