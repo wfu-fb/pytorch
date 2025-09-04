@@ -22,9 +22,9 @@ const std::set<libkineto::ActivityType> kCpuTypes{
     libkineto::ActivityType::CPU_INSTANT_EVENT,
     libkineto::ActivityType::USER_ANNOTATION,
     libkineto::ActivityType::EXTERNAL_CORRELATION,
-    libkineto::ActivityType::XPU_RUNTIME,
-    libkineto::ActivityType::CUDA_RUNTIME,
-    libkineto::ActivityType::CUDA_DRIVER,
+    // libkineto::ActivityType::XPU_RUNTIME,
+    // libkineto::ActivityType::CUDA_RUNTIME,
+    // libkineto::ActivityType::CUDA_DRIVER,
     libkineto::ActivityType::PYTHON_FUNCTION,
     libkineto::ActivityType::PRIVATEUSE1_RUNTIME,
     libkineto::ActivityType::PRIVATEUSE1_DRIVER,
@@ -300,6 +300,17 @@ void prepareTrace(
     k_activities.insert(kPrivateUse1Types.begin(), kPrivateUse1Types.end());
   }
 
+  // wenyin:
+  // Print the contents of k_activities for debugging
+  std::stringstream ss;
+  ss << "wenyin: " << __FILE__ << ": prepareTrace: k_activities contains: ";
+  for (const auto& act : k_activities) {
+    ss << libkineto::toString(act) << " ";
+  }
+  LOG(INFO) << ss.str();
+
+
+
   ExperimentalConfigWrapper configWrap(config);
 
   // Experimental Configuration options are present
@@ -312,7 +323,10 @@ void prepareTrace(
   const std::string configStr =
       appendCustomConfig(traceIdStr, config.custom_profiler_config);
 
+  LOG(INFO) << "wenyin: before calling activityProfiler().prepareTrace" ;
   libkineto::api().activityProfiler().prepareTrace(k_activities, configStr);
+  LOG(INFO) << "wenyin: after calling activityProfiler().prepareTrace" ;
+
 #endif // USE_KINETO
 }
 
