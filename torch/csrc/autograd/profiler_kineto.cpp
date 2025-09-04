@@ -601,6 +601,39 @@ void prepareProfiler(
       config.state == ProfilerState::ITT) {
     return;
   }
+  // wenyin:
+  // Print out the set of activities
+  std::cout << "wenyin: " << __FILE__ <<": prepareProfiler: activities: {";
+  bool first = true;
+  for (const auto& act : activities) {
+    if (!first) {
+      std::cout << ", ";
+    }
+    first = false;
+    switch (act) {
+      case torch::profiler::impl::ActivityType::CPU:
+        std::cout << "CPU";
+        break;
+      case torch::profiler::impl::ActivityType::CUDA:
+        std::cout << "CUDA";
+        break;
+      case torch::profiler::impl::ActivityType::XPU:
+        std::cout << "XPU";
+        break;
+      case torch::profiler::impl::ActivityType::MTIA:
+        std::cout << "MTIA";
+        break;
+      case torch::profiler::impl::ActivityType::PrivateUse1:
+        std::cout << "PRIVATEUSE1";
+        break;
+      default:
+        std::cout << "Unknown(" << static_cast<int>(act) << ")";
+        break;
+    }
+  }
+  std::cout << "}" << '\n';
+
+
   TORCH_CHECK(
       config.state == ProfilerState::KINETO ||
           config.state == ProfilerState::KINETO_GPU_FALLBACK ||
