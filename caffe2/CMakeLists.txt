@@ -1309,13 +1309,16 @@ target_include_directories(torch_cpu PRIVATE
 target_include_directories(torch_cpu PRIVATE
   ${TORCH_ROOT}/third_party/miniz-3.0.2)
 
-target_include_directories(torch_cpu PRIVATE
-  ${TORCH_ROOT}/third_party/kineto/libkineto/include)
 
-if(USE_KINETO)
-  target_include_directories(torch_cpu PRIVATE
-    ${TORCH_ROOT}/third_party/kineto/libkineto/src)
-endif()
+target_include_directories(torch_cpu PRIVATE
+   include/kineto)
+#  ${TORCH_ROOT}/third_party/kineto/libkineto/include)
+
+# wenyin: make kineto a standalone static library installed in the env
+# if(USE_KINETO)
+#   target_include_directories(torch_cpu PRIVATE
+#     ${TORCH_ROOT}/third_party/kineto/libkineto/src)
+# endif()
 
 target_include_directories(torch_cpu PRIVATE
   ${TORCH_ROOT}/third_party/cpp-httplib)
