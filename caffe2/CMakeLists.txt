@@ -1311,7 +1311,7 @@ target_include_directories(torch_cpu PRIVATE
 
 
 target_include_directories(torch_cpu PRIVATE
-   include/kineto)
+   ${PREFIX}/include/kineto)
 #  ${TORCH_ROOT}/third_party/kineto/libkineto/include)
 
 # wenyin: make kineto a standalone static library installed in the env
