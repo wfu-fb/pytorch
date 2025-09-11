@@ -1684,10 +1684,12 @@ if(USE_KINETO)
 
   add_library(kineto_external STATIC IMPORTED)
   set_target_properties(kineto_external PROPERTIES
-      IMPORTED_LOCATION "$ENV{PREFIX}/libkineto.a"
+      IMPORTED_LOCATION "$ENV{PREFIX}/lib/libkineto.a"
       INTERFACE_INCLUDE_DIRECTORIES "$ENV{PREFIX}/include/kineto"
   )
   list(APPEND Caffe2_DEPENDENCY_LIBS kineto_external)
+  message(STATUS "wenyin: kineto_external lib: $ENV{PREFIX}/lib/libkineto.a")
+
 
   string(APPEND CMAKE_CXX_FLAGS " -DUSE_KINETO")
   if(LIBKINETO_NOCUPTI)
