@@ -1680,7 +1680,15 @@ if(USE_KINETO)
 #    add_subdirectory("${KINETO_SOURCE_DIR}")
 #    set_property(TARGET kineto PROPERTY POSITION_INDEPENDENT_CODE ON)
 #   endif()
-  list(APPEND Caffe2_DEPENDENCY_LIBS libkineto.a)
+#   list(APPEND Caffe2_DEPENDENCY_LIBS kineto)
+
+  add_library(kineto_external STATIC IMPORTED)
+  set_target_properties(kineto_external PROPERTIES
+      IMPORTED_LOCATION "$ENV{PREFIX}/libkineto.a"
+      INTERFACE_INCLUDE_DIRECTORIES "$ENV{PREFIX}/include/kineto"
+  )
+  list(APPEND Caffe2_DEPENDENCY_LIBS kineto_external)
+
   string(APPEND CMAKE_CXX_FLAGS " -DUSE_KINETO")
   if(LIBKINETO_NOCUPTI)
     string(APPEND CMAKE_CXX_FLAGS " -DLIBKINETO_NOCUPTI")
