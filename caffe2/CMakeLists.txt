@@ -1311,8 +1311,8 @@ target_include_directories(torch_cpu PRIVATE
 
 
 target_include_directories(torch_cpu PRIVATE
-   ${CMAKE_INSTALL_PREFIX}/include/kineto)
-message(STATUS "wenyin: Installation prefix is: ${CMAKE_INSTALL_PREFIX}")
+   $ENV{PREFIX}/include/kineto)
+message(STATUS "wenyin: kineto Installation prefix is: $ENV{PREFIX}/include/kineto")
 #  ${TORCH_ROOT}/third_party/kineto/libkineto/include)
 
 # wenyin: make kineto a standalone static library installed in the env
