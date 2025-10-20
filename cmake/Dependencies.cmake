@@ -1617,14 +1617,15 @@ if(USE_KINETO)
   endif()
 
   set(CAFFE2_THIRD_PARTY_ROOT "${PROJECT_SOURCE_DIR}/third_party" CACHE STRING "")
-  set(KINETO_SOURCE_DIR "${CAFFE2_THIRD_PARTY_ROOT}/kineto/libkineto" CACHE STRING "")
-  set(KINETO_BUILD_TESTS OFF CACHE BOOL "")
-  set(KINETO_LIBRARY_TYPE "static" CACHE STRING "")
+  # wenyin: refactor kineto as static lib in installation
+  # set(KINETO_SOURCE_DIR "${CAFFE2_THIRD_PARTY_ROOT}/kineto/libkineto" CACHE STRING "")
+  # set(KINETO_BUILD_TESTS OFF CACHE BOOL "")
+  # set(KINETO_LIBRARY_TYPE "static" CACHE STRING "")
 
-  message(STATUS "Configuring Kineto dependency:")
-  message(STATUS "  KINETO_SOURCE_DIR = ${KINETO_SOURCE_DIR}")
-  message(STATUS "  KINETO_BUILD_TESTS = ${KINETO_BUILD_TESTS}")
-  message(STATUS "  KINETO_LIBRARY_TYPE = ${KINETO_LIBRARY_TYPE}")
+  # message(STATUS "Configuring Kineto dependency:")
+  # message(STATUS "  KINETO_SOURCE_DIR = ${KINETO_SOURCE_DIR}")
+  # message(STATUS "  KINETO_BUILD_TESTS = ${KINETO_BUILD_TESTS}")
+  # message(STATUS "  KINETO_LIBRARY_TYPE = ${KINETO_LIBRARY_TYPE}")
 
   if(NOT LIBKINETO_NOCUPTI)
     set(CUDA_SOURCE_DIR "${CUDA_TOOLKIT_ROOT_DIR}" CACHE STRING "")
@@ -1702,11 +1703,20 @@ if(USE_KINETO)
     endif()
   endif()
 
-  if(NOT TARGET kineto)
-    add_subdirectory("${KINETO_SOURCE_DIR}")
-    set_property(TARGET kineto PROPERTY POSITION_INDEPENDENT_CODE ON)
-  endif()
-  list(APPEND Caffe2_DEPENDENCY_LIBS kineto)
+#  wenyin: refactor kineto as static lib in installation
+#   if(NOT TARGET kineto)
+#    add_subdirectory("${KINETO_SOURCE_DIR}")
+#    set_property(TARGET kineto PROPERTY POSITION_INDEPENDENT_CODE ON)
+#   endif()
+#   list(APPEND Caffe2_DEPENDENCY_LIBS kineto)
+
+  add_library(kineto_external STATIC IMPORTED)
+  set_target_properties(kineto_external PROPERTIES
+      IMPORTED_LOCATION "$ENV{PREFIX}/lib/libkineto.a"
+      INTERFACE_INCLUDE_DIRECTORIES "$ENV{PREFIX}/include/kineto"
+  )
+  list(APPEND Caffe2_DEPENDENCY_LIBS kineto_external)
+
   string(APPEND CMAKE_CXX_FLAGS " -DUSE_KINETO")
   if(LIBKINETO_NOCUPTI)
     string(APPEND CMAKE_CXX_FLAGS " -DLIBKINETO_NOCUPTI")
