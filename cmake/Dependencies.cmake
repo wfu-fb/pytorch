@@ -1710,9 +1710,9 @@ if(USE_KINETO)
 #   endif()
 #   list(APPEND Caffe2_DEPENDENCY_LIBS kineto)
 
-  add_library(kineto_external STATIC IMPORTED)
+  add_library(kineto_external SHARED IMPORTED)
   set_target_properties(kineto_external PROPERTIES
-      IMPORTED_LOCATION "$ENV{PREFIX}/lib/libkineto.a"
+      IMPORTED_LOCATION "$ENV{PREFIX}/lib/libkineto.so"
       INTERFACE_INCLUDE_DIRECTORIES "$ENV{PREFIX}/include/kineto"
   )
   list(APPEND Caffe2_DEPENDENCY_LIBS kineto_external)
